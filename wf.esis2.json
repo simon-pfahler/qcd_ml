@@ -1,0 +1,1 @@
+{"setupscript": "setup.sh", "sbatchtemplate": "sbatch_template.sh", "workerscript": "GENIE.py", "param_generator": "generate_parameters.py", "param_includes": [], "status": {}, "requires": [], "maxparallel": "2", "workdirpath": ".", "requires_names": {}}
