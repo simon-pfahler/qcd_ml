@@ -7,8 +7,6 @@ import numpy as np
 import qcd_ml
 import qcd_ml.compat.gpt
 import torch
-from qcd_ml.nn.dense import v_Add, v_Copy, v_Dense
-from qcd_ml.nn.pt import v_PT
 from scipy.sparse.linalg import LinearOperator, eigs
 
 torch.manual_seed(42)
@@ -27,6 +25,7 @@ configno = ensemble_config.split(".")[0]
 out_path = parameters["out_path"]
 adam_lr = parameters["adam_lr"]
 batchsize = parameters["batchsize"]
+nr_layers = parameters["nr_layers"]
 
 # load the gauge filed
 loadpath = os.path.join(ensemble, ensemble_config)
@@ -35,9 +34,9 @@ U = [torch.tensor(qcd_ml.compat.gpt.lattice2ndarray(Umu)) for Umu in U_gpt]
 
 # paths
 paths = [[]] + [[(mu, 1)] for mu in range(4)] + [[(mu, -1)] for mu in range(4)]
-paths += [[(mu, 2)] for mu in range(4)] + [[(mu, -2)] for mu in range(4)]
-paths += [[(mu, 4)] for mu in range(4)] + [[(mu, -4)] for mu in range(4)]
-paths += [[(3, 8)], [(3, -8)]]
+# paths += [[(mu, 2)] for mu in range(4)] + [[(mu, -2)] for mu in range(4)]
+# paths += [[(mu, 4)] for mu in range(4)] + [[(mu, -4)] for mu in range(4)]
+# paths += [[(3, 8)], [(3, -8)]]
 
 
 # create the model
@@ -47,40 +46,40 @@ class Deep_Model(torch.nn.Module):
 
         self.U = U
         self.paths = paths
-        self.layers = torch.nn.ModuleList(
+        self.pt_layers = [
+            qcd_ml.nn.pt.v_PT(self.paths, self.U) for _ in range(nr_layers)
+        ]
+        self.dense_layers = torch.nn.ModuleList(
             [
-                v_Copy(len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Dense(len(self.paths), len(self.paths)),
-                v_PT(self.paths, self.U),
-                v_Add(len(self.paths)),
+                qcd_ml.nn.dense.v_Dense(1, len(self.paths)),
+                *[
+                    qcd_ml.nn.dense.v_Dense(
+                        len(self.paths) + 1, len(self.paths)
+                    )
+                    for _ in range(nr_layers - 1)
+                ],
+                qcd_ml.nn.dense.v_Dense(len(self.paths) + 1, 1),
             ]
         )
 
     def forward(self, v):
         v = torch.stack([v])
-        for layer in self.layers:
-            v = layer(v)
+        v_in = v.detach().clone()
+        for i in range(nr_layers):
+            v = self.pt_layers[i](self.dense_layers[i](v))
+            v = torch.cat([v_in, v])
+        v = self.dense_layers[-1](v)
         return v[0]
 
 
 model = Deep_Model(U, paths)
 
-# helper objects for weight initialization
-idty = torch.eye(4)
-zeros = torch.zeros((4, 4))
+# initialize weights
+for li in model.dense_layers:
+    li.weights.data = 0.001 * torch.randn_like(
+        li.weights.data, dtype=torch.cdouble
+    )
+model.dense_layers[-1].weights.data[0, 0] += torch.eye(4)
 
 # Wilson-clover Dirac operator
 # w = qcd_ml.qcd.dirac.dirac_wilson_clover(U, fermion_p["mass"], fermion_p["csw_r"])
@@ -94,18 +93,6 @@ w = lambda x: torch.tensor(
         )
     )
 )
-
-
-# function to calculate mse
-def complex_mse(output, target):
-    err = output - target
-    return (err.conj() * err).real.sum()
-
-
-# function for l2norm
-def l2norm(v):
-    return (v.conj() * v).real.sum()
-
 
 optimizer = torch.optim.Adam(model.parameters(), lr=adam_lr)
 
@@ -171,13 +158,14 @@ for t in range(training_epochs):
     outs = [*v1s, *v2s]
 
     # normalize
-    norms = [l2norm(e) for e in ins]
+    norms = [innerproduct(e, e) for e in ins]
     ins = [e / n**0.5 for e, n in zip(ins, norms)]
     outs = [e / n**0.5 for e, n in zip(outs, norms)]
 
     curr_cost = 0
     for ei, eo in zip(ins, outs):
-        curr_cost += complex_mse(model.forward(ei), eo)
+        err = model.forward(ei) - eo
+        curr_cost += innerproduct(err, err).real
     curr_cost /= 8 * 8 * 8 * 16
     curr_cost /= batchsize
 
