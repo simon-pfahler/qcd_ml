@@ -26,6 +26,9 @@ out_path = parameters["out_path"]
 adam_lr = parameters["adam_lr"]
 batchsize = parameters["batchsize"]
 nr_layers = parameters["nr_layers"]
+filter_iteration = parameters["filter_iteration"]
+lens_space = parameters["lens_space"]
+lens_time = parameters["lens_time"]
 
 # load the gauge filed
 loadpath = os.path.join(ensemble, ensemble_config)
@@ -33,10 +36,13 @@ U_gpt = gpt.load(loadpath)
 U = [torch.tensor(qcd_ml.compat.gpt.lattice2ndarray(Umu)) for Umu in U_gpt]
 
 # paths
-paths = [[]] + [[(mu, 1)] for mu in range(4)] + [[(mu, -1)] for mu in range(4)]
-# paths += [[(mu, 2)] for mu in range(4)] + [[(mu, -2)] for mu in range(4)]
-# paths += [[(mu, 4)] for mu in range(4)] + [[(mu, -4)] for mu in range(4)]
-# paths += [[(3, 8)], [(3, -8)]]
+paths = [[]]
+for l in lens_space:
+    paths.extend(
+        [[(mu, l)] for mu in range(3)] + [[(mu, -l)] for mu in range(3)]
+    )
+for l in lens_time:
+    paths.extend([[(3, l)], [3, -l]])
 
 
 # create the model
@@ -64,10 +70,8 @@ class Deep_Model(torch.nn.Module):
 
     def forward(self, v):
         v = torch.stack([v])
-        v_in = v.detach().clone()
         for i in range(nr_layers):
             v = self.pt_layers[i](self.dense_layers[i](v))
-            v = torch.cat([v_in, v])
         v = self.dense_layers[-1](v)
         return v[0]
 
@@ -148,7 +152,7 @@ for t in range(training_epochs):
 
     v2s = [
         qcd_ml.util.solver.GMRES(
-            w, rv2, torch.zeros_like(rv2), eps=1e-8, maxiter=10
+            w, rv2, torch.zeros_like(rv2), eps=1e-8, maxiter=filter_iteration
         )[0]
         for rv2 in rv2s
     ]

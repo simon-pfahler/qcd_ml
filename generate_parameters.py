@@ -27,8 +27,6 @@ fermion_ps = [
         -0.58,
         -0.59,
         -0.6,
-        -0.61,
-        -0.62,
     ]
     # for m in [-0.551,-0.552,-0.553,-0.554,-0.555,-0.556,-0.557,-0.558,-0.559,-0.561,-0.562,-0.563,-0.564,-0.565,-0.566,-0.567,-0.568,-0.569]
 ]
@@ -37,6 +35,10 @@ training_epochs = 1000
 check_icg_every = 10
 adam_lr = 1e-2
 batchsize = 1
+nr_layers = 8
+filter_iteration = 10
+lens_space = [1, 2, 4]
+lens_time = [1, 2, 4, 8]
 
 out_path = "../"
 
@@ -49,7 +51,11 @@ for i, fermion_p in enumerate(fermion_ps):
         "check_icg_every": check_icg_every,
         "adam_lr": adam_lr,
         "batchsize": batchsize,
+        "nr_layers": nr_layers,
         "out_path": out_path,
+        "filter_iteration": filter_iteration,
+        "lens_space": lens_space,
+        "lens_time": lens_time,
     }
 
     with open(f"parameters.{i}.json", "w") as fout:
