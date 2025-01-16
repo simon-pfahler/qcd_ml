@@ -3,7 +3,7 @@
 #SBATCH -J GENIE
 #SBATCH --array TASKARRAYDEFINITION
 #SBATCH -M hpd
-#SBATCH --nodelist hpd-node-009
+#SBATCH --nodelist hpd-node-007
 #SBATCH -t 5759
 #SBATCH --mem=100G
 #ESIS_PRIVATE

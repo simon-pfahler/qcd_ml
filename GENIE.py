@@ -11,6 +11,11 @@ from scipy.sparse.linalg import LinearOperator, eigs
 
 torch.manual_seed(42)
 
+# test vectors
+test_vs = [
+    torch.randn(8, 8, 8, 16, 4, 3, dtype=torch.cdouble) for _ in range(10)
+]
+
 innerproduct = lambda x, y: (x.conj() * y).sum()
 
 taskid = int(os.environ["SLURM_ARRAY_TASK_ID"])
@@ -42,48 +47,45 @@ for l in lens_space:
         [[(mu, l)] for mu in range(3)] + [[(mu, -l)] for mu in range(3)]
     )
 for l in lens_time:
-    paths.extend([[(3, l)], [3, -l]])
+    paths.extend([[(3, l)], [(3, -l)]])
 
 
 # create the model
-class Deep_Model(torch.nn.Module):
+class GENIE(torch.nn.Module):
     def __init__(self, U, paths):
-        super(Deep_Model, self).__init__()
+        super(GENIE, self).__init__()
 
         self.U = U
         self.paths = paths
-        self.pt_layers = [
-            qcd_ml.nn.pt.v_PT(self.paths, self.U) for _ in range(nr_layers)
-        ]
+        self.pt = qcd_ml.nn.pt.v_PT(self.paths, self.U)
+
         self.dense_layers = torch.nn.ModuleList(
             [
                 qcd_ml.nn.dense.v_Dense(1, len(self.paths)),
                 *[
-                    qcd_ml.nn.dense.v_Dense(
-                        len(self.paths) + 1, len(self.paths)
-                    )
+                    qcd_ml.nn.dense.v_Dense(len(self.paths), len(self.paths))
                     for _ in range(nr_layers - 1)
                 ],
-                qcd_ml.nn.dense.v_Dense(len(self.paths) + 1, 1),
+                qcd_ml.nn.dense.v_Dense(len(self.paths), 1),
             ]
         )
 
     def forward(self, v):
         v = torch.stack([v])
         for i in range(nr_layers):
-            v = self.pt_layers[i](self.dense_layers[i](v))
+            v = self.pt(self.dense_layers[i](v))
         v = self.dense_layers[-1](v)
         return v[0]
 
 
-model = Deep_Model(U, paths)
+model = GENIE(U, paths)
 
 # initialize weights
 for li in model.dense_layers:
     li.weights.data = 0.001 * torch.randn_like(
         li.weights.data, dtype=torch.cdouble
     )
-model.dense_layers[-1].weights.data[0, 0] += torch.eye(4)
+    li.weights.data[0, 0] += torch.eye(4)
 
 # Wilson-clover Dirac operator
 # w = qcd_ml.qcd.dirac.dirac_wilson_clover(U, fermion_p["mass"], fermion_p["csw_r"])
@@ -106,13 +108,9 @@ check_every = parameters["check_icg_every"]
 cost = np.zeros(training_epochs)
 its = np.zeros(training_epochs // check_every + 1)
 
-# test vector
-test_vs = [
-    torch.randn(8, 8, 8, 16, 4, 3, dtype=torch.cdouble) for _ in range(10)
-]
 # it_refs = np.zeros(len(test_vs))
 # for i, test_v in enumerate(test_vs):
-#    x, ret = qcd_ml.util.solver.GMRES(w, test_v, torch.zeros_like(test_v), eps=1e-4, maxiter=10000)
+#    x, ret = qcd_ml.util.solver.GMRES(w, test_v, torch.zeros_like(test_v), eps=1e-8, maxiter=10000)
 #    it_refs[i] = ret["k"]
 # print(f"Reference Iteration count: {np.mean(it_refs)} +- {np.std(it_refs, ddof=1)/np.sqrt(len(test_vs))}")
 
@@ -139,27 +137,25 @@ w_LinOp = LinearOperator((l, l), matvec=w_np)
 #    print((ev-shift).real, (ev-shift).imag)
 
 for t in range(training_epochs):
-    v1s = [
-        torch.randn(8, 8, 8, 16, 4, 3, dtype=torch.cdouble)
-        for _ in range(batchsize)
-    ]
     rv2s = [
         torch.randn(8, 8, 8, 16, 4, 3, dtype=torch.cdouble)
         for _ in range(batchsize)
     ]
 
-    wv1s = [w(v1) for v1 in v1s]
-
     v2s = [
         qcd_ml.util.solver.GMRES(
-            w, rv2, torch.zeros_like(rv2), eps=1e-8, maxiter=filter_iteration
+            w,
+            rv2,
+            torch.zeros_like(rv2),
+            eps=1e-8,
+            maxiter=filter_iteration + 1,
         )[0]
         for rv2 in rv2s
     ]
     wv2s = [w(v2) for v2 in v2s]
 
-    ins = [*wv1s, *wv2s]
-    outs = [*v1s, *v2s]
+    ins = wv2s
+    outs = v2s
 
     # normalize
     norms = [innerproduct(e, e) for e in ins]
@@ -199,6 +195,11 @@ with torch.no_grad():
             maxiter=10000,
         )
         its[i] = ret_p["k"]
+        if i == 0:
+            np.savetxt(
+                os.path.join(out_path, f"residuals_{taskid}.dat"),
+                ret_p["history"],
+            )
 print(
     f"Model Iteration count: {np.mean(its)} +- {np.std(its, ddof=1)/np.sqrt(len(test_vs))}"
 )
