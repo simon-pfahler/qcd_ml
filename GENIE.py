@@ -195,11 +195,10 @@ with torch.no_grad():
             maxiter=10000,
         )
         its[i] = ret_p["k"]
-        if i == 0:
-            np.savetxt(
-                os.path.join(out_path, f"residuals_{taskid}.dat"),
-                ret_p["history"],
-            )
+        np.savetxt(
+            os.path.join(out_path, f"residuals_{taskid}_sample{i}.dat"),
+            ret_p["history"],
+        )
 print(
     f"Model Iteration count: {np.mean(its)} +- {np.std(its, ddof=1)/np.sqrt(len(test_vs))}"
 )
