@@ -34,6 +34,7 @@ nr_layers = parameters["nr_layers"]
 filter_iteration = parameters["filter_iteration"]
 lens_space = parameters["lens_space"]
 lens_time = parameters["lens_time"]
+cheb_filter_iteration = parameters["cheb_filter_iteration"]
 
 # load the gauge filed
 loadpath = os.path.join(ensemble, ensemble_config)
@@ -88,16 +89,8 @@ for li in model.dense_layers:
     li.weights.data[0, 0] += torch.eye(4)
 
 # Wilson-clover Dirac operator
-# w = qcd_ml.qcd.dirac.dirac_wilson_clover(U, fermion_p["mass"], fermion_p["csw_r"])
-w_gpt = gpt.qcd.fermion.wilson_clover(U_gpt, fermion_p)
-w = lambda x: torch.tensor(
-    qcd_ml.compat.gpt.lattice2ndarray(
-        w_gpt(
-            qcd_ml.compat.gpt.ndarray2lattice(
-                x.numpy(), U_gpt[0].grid, gpt.vspincolor
-            )
-        )
-    )
+w = qcd_ml.qcd.dirac.dirac_wilson_clover(
+    U, fermion_p["mass"], fermion_p["csw_r"]
 )
 
 optimizer = torch.optim.Adam(model.parameters(), lr=adam_lr)
@@ -113,49 +106,101 @@ its = np.zeros(training_epochs // check_every + 1)
 #    x, ret = qcd_ml.util.solver.GMRES(w, test_v, torch.zeros_like(test_v), eps=1e-8, maxiter=10000)
 #    it_refs[i] = ret["k"]
 # print(f"Reference Iteration count: {np.mean(it_refs)} +- {np.std(it_refs, ddof=1)/np.sqrt(len(test_vs))}")
-
-shift = -10
-l = 8 * 8 * 8 * 16 * 4 * 3
-w_np = (
-    lambda x: np.reshape(
-        qcd_ml.compat.gpt.lattice2ndarray(
-            w_gpt(
-                qcd_ml.compat.gpt.ndarray2lattice(
-                    np.reshape(x, (8, 8, 8, 16, 4, 3)),
-                    U_gpt[0].grid,
-                    gpt.vspincolor,
-                )
-            )
-        ),
-        (l,),
-    )
-    + shift * x
-)
-w_LinOp = LinearOperator((l, l), matvec=w_np)
+#
+# shift = -10
+# l = 8 * 8 * 8 * 16 * 4 * 3
+# w_np = (
+#    lambda x: np.reshape(
+#        qcd_ml.compat.gpt.lattice2ndarray(
+#            w_gpt(
+#                qcd_ml.compat.gpt.ndarray2lattice(
+#                    np.reshape(x, (8, 8, 8, 16, 4, 3)),
+#                    U_gpt[0].grid,
+#                    gpt.vspincolor,
+#                )
+#            )
+#        ),
+#        (l,),
+#    )
+#    + shift * x
+# )
+# w_LinOp = LinearOperator((l, l), matvec=w_np)
 # evs = eigs(w_LinOp, k=100, which='LM', return_eigenvectors=False, tol=1e-2)
 # for ev in evs:
 #    print((ev-shift).real, (ev-shift).imag)
 
+
+# >>> Chebyshev stuff
+def ChebApprox(a, b, n, func):
+    c = np.zeros(n)
+    bmah = 0.5 * (b - a)
+    bpah = 0.5 * (b + a)
+    fvals = np.zeros(n)
+    for k in range(n):
+        y = np.cos(np.pi * (k + 0.5) / n)
+        fvals[k] = func(y * bmah + bpah)
+    fac = 2.0 / n
+    for j in range(n):
+        s = 0.0
+        for k in range(n):
+            s += fvals[k] + np.cos(np.pi * j * (k + 0.5) / n)
+        c[j] = fac * s
+    c[0] /= 2
+    return c
+
+
+def ChebEval(c, m, A, v):
+    d = torch.zeros_like(v)
+    dd = torch.zeros_like(v)
+    for j in range(m, 0, -1):
+        sv = d
+        d = 2 * A(d) - dd + c[j] * v
+        dd = sv
+    return A(d) - dd + c[0] * v
+
+
+def w_trafo(v):
+    return 2 * w(v) - (b + a) * v / (b - a)
+
+
+# some magic numbers for Chebyshev approximation
+# we approximate 1/x in [a, b] (smaller a leads to large fluctuations, b is set to roughly largest eigenvalues)
+a = 0.5
+b = 8
+N = 1024  # how many Chebyshev polynomials to use to generate the coefficients (should be close to infinity)
+c = ChebApprox(a, b, N, lambda x: 1 / x)
+
+
+# <<< Chebyshev stuff
+
 for t in range(training_epochs):
-    rv2s = [
+    tmps = [
         torch.randn(8, 8, 8, 16, 4, 3, dtype=torch.cdouble)
         for _ in range(batchsize)
     ]
 
-    v2s = [
+    tmp2s = [
         qcd_ml.util.solver.GMRES(
             w,
-            rv2,
-            torch.zeros_like(rv2),
+            torch.zeros_like(tmp),
+            tmp,
             eps=1e-8,
             maxiter=filter_iteration + 1,
         )[0]
-        for rv2 in rv2s
+        for tmp in tmps
     ]
-    wv2s = [w(v2) for v2 in v2s]
+    left_pres = [model.forward(w(tmp2)) for tmp2 in tmp2s]
 
-    ins = wv2s
-    outs = v2s
+    left_0s = [
+        ChebEval(c, cheb_filter_iteration, w_trafo, left_pre)
+        for left_pre in left_pres
+    ]
+
+    right_0s = [
+        ChebEval(c, cheb_filter_iteration, w_trafo, tmp2) for tmp2 in tmp2s
+    ]
+    ins = left_0s
+    outs = right_0s
 
     # normalize
     norms = [innerproduct(e, e) for e in ins]
@@ -164,7 +209,7 @@ for t in range(training_epochs):
 
     curr_cost = 0
     for ei, eo in zip(ins, outs):
-        err = model.forward(ei) - eo
+        err = ei - eo
         curr_cost += innerproduct(err, err).real
     curr_cost /= 8 * 8 * 8 * 16
     curr_cost /= batchsize

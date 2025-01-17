@@ -33,7 +33,8 @@ check_icg_every = 10
 adam_lr = 1e-2
 batchsize = 1
 nr_layers = 8
-filter_iteration = 0
+filter_iteration = 10
+cheb_filter_iteration = 10
 lens_space = [1, 2, 4]
 lens_time = [1, 2, 4, 8]
 
@@ -53,6 +54,7 @@ for i, fermion_p in enumerate(fermion_ps):
         "filter_iteration": filter_iteration,
         "lens_space": lens_space,
         "lens_time": lens_time,
+        "cheb_filter_iteration": cheb_filter_iteration,
     }
 
     with open(f"parameters.{i}.json", "w") as fout:
