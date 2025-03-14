@@ -1,8 +1,9 @@
 """
-Dense
-=====
+qcd_ml.nn.dense
+===============
 
-Dense Layers.
+This module provides dense linear layers. Currently ``v_Dense``
+for vector-like objects is provided.
 """
 
 import torch
@@ -11,13 +12,24 @@ from ..base.operations import v_spin_const_transform
 
 
 class v_Dense(torch.nn.Module):
-    """
+    r"""
     Dense Layer for vectors.
+    
+    ``v_Dense.forward(features_in)`` computes
+    
+    .. math::
 
-    Weights are stored as [feature_in, feature_out].
+        \phi_o(x) = \sum\limits_i W_{io} \phi_i(x)
 
-    The output features are a linear combination of input features, multiplied
-    by weights in the form of 4x4 spin matrices.
+    where :math:`W_{io}` are spin matrices.
+
+
+    ``v_Dense.reverse(features_in)`` computes the
+    hermitian adjoint operation, i.e.,
+
+    ..math::
+
+        \phi_i(x) = \sum\limits_o} W_{io}^\dagger \phi_o(x).
     """
 
     def __init__(self, n_feature_in, n_feature_out):
@@ -30,6 +42,11 @@ class v_Dense(torch.nn.Module):
         self.n_feature_out = n_feature_out
 
     def forward(self, features_in):
+        r"""
+        .. math::
+
+            \phi_o(x) = \sum\limits_i W_{io} \phi_i(x)
+        """
         if features_in.shape[0] != self.n_feature_in:
             raise ValueError(
                 f"shape mismatch: got {features_in.shape[0]} but expected {self.n_feature_in}"
@@ -38,6 +55,13 @@ class v_Dense(torch.nn.Module):
         return torch.einsum("iojk,iabcdkG->oabcdjG", self.weights, features_in)
 
     def reverse(self, features_in):
+        r"""
+        Hermitian adjoint operation of ``forward``.
+
+        ..math::
+
+            \phi_i(x) = \sum\limits_o} W_{io}^\dagger \phi_o(x).
+        """
         if features_in.shape[0] != self.n_feature_out:
             raise ValueError(
                 f"shape mismatch: got {features_in.shape[0]} but expected {self.n_feature_out}"
