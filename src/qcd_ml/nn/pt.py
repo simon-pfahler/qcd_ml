@@ -42,12 +42,23 @@ class v_PT(torch.nn.Module):
                 f"shape mismatch: got {features_in.shape[0]} but expected {self.n_feature_in}"
             )
 
-        features_out = [
-            torch.zeros_like(features_in[0]) for _ in range(self.n_feature_out)
-        ]
+        features_out = [None] * self.n_feature_out
 
         for i, p in enumerate(self.path_buffers):
             features_out[i] = p.v_transport(features_in[i])
+
+        return torch.stack(features_out)
+
+    def reverse(self, features_in):
+        if features_in.shape[0] != self.n_feature_in:
+            raise ValueError(
+                f"shape mismatch: got {features_in.shape[0]} but expected {self.n_feature_in}"
+            )
+
+        features_out = [None] * self.n_feature_out
+
+        for i, p in enumerate(self.path_buffers):
+            features_out[i] = p.v_reverse_transport(features_in[i])
 
         return torch.stack(features_out)
 
