@@ -43,4 +43,4 @@ class v_Dense(torch.nn.Module):
                 f"shape mismatch: got {features_in.shape[0]} but expected {self.n_feature_out}"
             )
 
-        return torch.einsum("iojk,oabcdjG->iabcdkG", self.weights.adjoint(), features_in)
+        return torch.einsum("iojk,oabcdkG->iabcdjG", self.weights.adjoint(), features_in)
