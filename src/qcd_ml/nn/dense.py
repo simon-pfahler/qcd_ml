@@ -36,3 +36,11 @@ class v_Dense(torch.nn.Module):
             )
 
         return torch.einsum("iojk,iabcdkG->oabcdjG", self.weights, features_in)
+
+    def reverse(self, features_in):
+        if features_in.shape[0] != self.n_feature_out:
+            raise ValueError(
+                f"shape mismatch: got {features_in.shape[0]} but expected {self.n_feature_out}"
+            )
+
+        return torch.einsum("iojk,oabcdkG->iabcdjG", self.weights.adjoint(), features_in)
