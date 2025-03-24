@@ -6,7 +6,7 @@ from qcd_ml.base.operations import link_gauge_transform, v_gauge_transform
 from qcd_ml.nn.pt import v_PT
 
 
-def test_v_PTC_equivariance(config_1500, psi_test, V_1500mu0_1500mu2):
+def test_v_PT_equivariance(config_1500, psi_test, V_1500mu0_1500mu2):
     V = V_1500mu0_1500mu2
     paths = (
         [[]] + [[(mu, 1)] for mu in range(4)] + [[(mu, -1)] for mu in range(4)]
@@ -34,3 +34,18 @@ def test_v_PTC_equivariance(config_1500, psi_test, V_1500mu0_1500mu2):
         torch.allclose(psibar_gtb, psibar_gta)
         for psibar_gtb, psibar_gta in zip(psibar_gtbs, psibar_gtas)
     )
+
+
+def test_v_PT_reverse(config_1500, psi_test):
+    paths = (
+        [[]] + [[(mu, 1)] for mu in range(4)] + [[(mu, -1)] for mu in range(4)]
+    )
+    layer = v_PT(paths, config_1500)
+
+    features_in = torch.stack([psi_test]*len(paths))
+    features_in = torch.randn_like(features_in)
+
+    features_out = layer.forward(features_in)
+    features_reverse = layer.reverse(features_out)
+
+    assert torch.allclose(features_reverse, features_in)
