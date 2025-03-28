@@ -84,3 +84,36 @@ def topological_charge_density_clover(U, _gpt_compat=False):
     else:
         rescale = 16.0 / (32.0 * numpy.pi**2) * (0.125**2.0) * _mul(U[0].shape[0:4])
     return q_field * rescale
+
+
+def topological_charge_density_plaquette(U):
+    r"""
+    The topological charge density field :math:`q(n)` using the plaquette field
+    strength.
+
+    .. math::
+
+        q(n) = \frac{1}{32\pi} \epsilon_{\mu\nu\rho\sigma} \mbox{Tr}\left(\frac{U_{\mu\nu}(x) - U_{\mu\nu}^\dagger(x)}{2i}\frac{U_{\rho\sigma}(x) - U_{\rho\sigma}^\dagger(x)}{2i}\right)
+
+    See 10.1103/PhysRevLett.128.032003.
+    """
+    Nd = 4
+    ndims = 3
+    Hp = lambda mu, lst: lst + [(mu, 1)]
+    Hm = lambda mu, lst: lst + [(mu, -1)]
+
+    gpt_rescale_factor = 2 / Nd / (Nd - 1) / ndims
+    
+    plaquette_paths = [[
+            list(reversed(Hp(mu, Hp(nu, Hm(mu, Hm(nu, []))))))
+             for nu in range(4)] for mu in range(4)]
+    
+    untraced_plaquettes = [[PathBuffer(U, pmunu).gauge_transport_matrix  for pmunu in pmu] for pmu in plaquette_paths]
+
+    q_field = 0
+    for (mu,nu,rho,sigma), sgn in levi_civita_index_and_sign_iterator(4):
+        term_a = (untraced_plaquettes[mu][nu] - untraced_plaquettes[mu][nu].adjoint()) / (2j)
+        term_b = (untraced_plaquettes[rho][sigma] - untraced_plaquettes[rho][sigma].adjoint()) / (2j)
+        q_field += sgn * torch.einsum("abcdii->abcd", SU3_group_compose(term_a, term_b))
+
+    return q_field / 32 / torch.pi**2
