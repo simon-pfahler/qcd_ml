@@ -104,3 +104,27 @@ def test_LGE_BilinearLM_autograd():
     input2_features.requires_grad = True
 
     assert torch.autograd.gradcheck(Apply_LGE_Bilinear.apply, (input1_features, input2_features, layer2.weights))
+
+
+def test_LGE_CB_equivariance(config_1500, V_1500mu0_1500mu2):
+    n_input = 2
+    n_output = 2
+    paths = ([[]]
+             + [[(mu, 1)] for mu in range(4)]
+             + [[(mu, -1)] for mu in range(4)])
+
+    layer = LGE_CB(n_input, n_output, paths)
+
+    input_features = torch.randn(n_input, 8,8,8,16, 3,3, dtype=torch.cdouble)
+    with torch.no_grad():
+        output_features = layer.forward(config_1500, input_features)
+    output_features_gt = torch.stack([m_gauge_transform(V_1500mu0_1500mu2, ofl) for ofl in output_features])
+
+    input_features_gt = torch.stack([m_gauge_transform(V_1500mu0_1500mu2, ifl) for ifl in input_features])
+    config_gt = link_gauge_transform(config_1500, V_1500mu0_1500mu2)
+
+    with torch.no_grad():
+        output_features = layer.forward(config_gt, input_features_gt)
+
+    assert torch.allclose(output_features_gt, output_features)
+
