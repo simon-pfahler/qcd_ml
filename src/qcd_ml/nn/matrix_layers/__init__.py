@@ -24,7 +24,7 @@ from .loop_generator import PolyakovLoopGenerator, PositiveOrientationPlaquetteG
 from .activation import LGE_ReTrAct
 from .exponentiation import LGE_Exp
 
-from ..base.paths import PathBuffer
+from ...base.paths import PathBuffer
 
 class LGE_CB(torch.nn.Module):
     r"""
