@@ -17,12 +17,14 @@ Provides the following layers:
 See [10.1103/PhysRevLett.128.032003].
 """
 
+import torch
 from .convolution import LGE_Convolution
 from .bilinear import LGE_Bilinear
 from .loop_generator import PolyakovLoopGenerator, PositiveOrientationPlaquetteGenerator
 from .activation import LGE_ReTrAct
 from .exponentiation import LGE_Exp
 
+from ..base.paths import PathBuffer
 
 class LGE_CB(torch.nn.Module):
     r"""
