@@ -18,6 +18,7 @@ See [10.1103/PhysRevLett.128.032003].
 """
 
 import torch
+import itertools
 from .convolution import LGE_Convolution
 from .bilinear import LGE_Bilinear
 from .loop_generator import PolyakovLoopGenerator, PositiveOrientationPlaquetteGenerator
