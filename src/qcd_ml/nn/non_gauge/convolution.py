@@ -27,7 +27,7 @@ class C_Convolution(torch.nn.Module):
     def __init__(self, n_input, n_output, kernel_size, bias=True, nd=4):
         super(C_Convolution, self).__init__()
 
-        # number lattice dimensions
+        # number of lattice dimensions
         self.nd = nd
 
         # number of channels
@@ -111,13 +111,19 @@ class C_Convolution(torch.nn.Module):
         Padding size to preserve lattice size.
         """
         padding = []
-        for k in reversed(self.kernel_size):
-            if k % 2 == 0:
+        for ks in reversed(self.kernel_size):
+            if ks % 2 == 0:
                 # even kernel
-                padding.append((k - 1) // 2)
-                padding.append(k // 2)
+                padding.append((ks - 1) // 2)
+                padding.append(ks // 2)
             else:
                 # odd kernel
-                padding.append(k // 2)
-                padding.append(k // 2)
+                padding.append(ks // 2)
+                padding.append(ks // 2)
         return padding
+
+    def extra_repr(self):
+        return (
+            f"{self.n_input}, {self.n_output}, kernel_size={self.kernel_size}"
+            f", bias={self.biases is not None}"
+        )
