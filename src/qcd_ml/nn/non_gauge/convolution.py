@@ -5,7 +5,6 @@ Non gauge equivariant convolutions.
 """
 
 import torch
-from ...base.paths import PathBuffer
 
 
 class C_Convolution(torch.nn.Module):
