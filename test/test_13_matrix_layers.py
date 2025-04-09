@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from qcd_ml.nn.matrix_layers import LGE_Convolution, LGE_Bilinear, LGE_ReTrAct, LGE_Exp
+from qcd_ml.nn.matrix_layers import LGE_Convolution, LGE_Bilinear, LGE_ReTrAct, LGE_Exp, LGE_CB
 from qcd_ml.nn.matrix_layers.bilinear import LGE_BilinearLM, Apply_LGE_Bilinear
 from qcd_ml.base.paths import PathBuffer
 from qcd_ml.base.operations import m_gauge_transform, link_gauge_transform
