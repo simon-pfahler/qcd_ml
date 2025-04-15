@@ -72,12 +72,9 @@ def topological_charge_density_clover(U, _gpt_compat=False):
     Qmunu = [[sum(pnu) / 4 for pnu in pmu] for pmu in clover_terms]
     Fmunu = [[Qmunu[mu][nu] - Qmunu[nu][mu] for nu in range(4)] for mu in range(4)]
 
-    identity = torch.zeros_like(Fmunu[0][0])
-    identity[:,:,:,:] = torch.eye(3,3, dtype=torch.cdouble)
-    
     q_field = 0
     for (mu,nu,rho,sigma), sgn in levi_civita_index_and_sign_iterator(4):
-        q_field += sgn * torch.einsum("abcdii->abcd", identity - SU3_group_compose(Fmunu[mu][nu], Fmunu[rho][sigma]))
+        q_field -= sgn * torch.einsum("abcdii->abcd", SU3_group_compose(Fmunu[mu][nu], Fmunu[rho][sigma]))
         
     if not _gpt_compat:
         rescale = 1 / 32 / numpy.pi**2
