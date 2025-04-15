@@ -79,6 +79,10 @@ class LGE_Convolution(torch.nn.Module):
 
             W_i(x) \rightarrow \sum_{j\mu k} \omega_{i\mu k j} U_{\mu k}(x) W_j(x+k\mu) U_{\mu k}^\dagger(x)
         """
+        if features_in.shape[0] != self.n_input:
+            raise ValueError(
+                f"shape mismatch: got {features_in.shape[0]} but expected {self.n_input}"
+            )
         if id(U) in self.path_buffer_cache:
             path_buffers = self.path_buffer_cache[id(U)]
         else:

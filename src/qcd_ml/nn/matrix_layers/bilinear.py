@@ -32,6 +32,14 @@ class LGE_Bilinear(torch.nn.Module):
         .. math::
             W_{x,i}, W_{x,i}' \rightarrow \sum_{j,k} \alpha_{i,j,k} W_{x,j} W_{x,k}'
         """
+        if features_in1.shape[0] != self.n_input1:
+            raise ValueError(
+                f"shape mismatch: got {features_in1.shape[0]} but expected {self.n_input1}"
+            )
+        if features_in2.shape[0] != self.n_input2:
+            raise ValueError(
+                f"shape mismatch: got {features_in2.shape[0]} but expected {self.n_input2}"
+            )
 
         return torch.einsum("jki,jabcdnr,kabcdrm->iabcdnm", self.weights, features_in1, features_in2)
 
@@ -88,5 +96,13 @@ class LGE_BilinearLM(torch.nn.Module):
         .. math::
             W_{x,i}, W_{x,i}' \rightarrow \sum_{j,k} \alpha_{i,j,k} W_{x,j} W_{x,k}'
         """
+        if features_in1.shape[0] != self.n_input1:
+            raise ValueError(
+                f"shape mismatch: got {features_in1.shape[0]} but expected {self.n_input1}"
+            )
+        if features_in2.shape[0] != self.n_input2:
+            raise ValueError(
+                f"shape mismatch: got {features_in2.shape[0]} but expected {self.n_input2}"
+            )
 
         return self.fn(features_in1, features_in2, self.weights)

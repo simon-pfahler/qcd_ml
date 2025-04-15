@@ -15,9 +15,14 @@ class LGE_Exp(torch.nn.Module):
     """
     def __init__(self, n_features_in):
         super(LGE_Exp, self).__init__()
+        self.n_features_in = n_features_in
         self.weights = torch.nn.Parameter(torch.randn(4, n_features_in, dtype=torch.cdouble))
         
     def forward(self, U, W):
+        if W.shape[0] != self.n_features_in:
+            raise ValueError(
+                f"shape mismatch: got {W.shape[0]} but expected {self.n_features_in}"
+            )
         hermitian = W.adjoint() - W
         trace = torch.einsum("mabcdii->mabcd", hermitian)
 
