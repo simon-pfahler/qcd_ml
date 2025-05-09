@@ -81,6 +81,17 @@ def test_LGE_Exp_equivariance(config_1500, V_1500mu0_1500mu2):
     assert torch.allclose(transformed_after, transformed_before)
 
 
+def test_LGE_Exp_unitary(config_1500):
+    n_input = 1
+    layer = LGE_Exp(n_input)
+    input_features = config_1500
+    input_GE = torch.stack([PathBuffer(config_1500, [(0,1), (1,1), (0,-1), (1,-1)]).gauge_transport_matrix])
+
+    features_out = layer.forward(input_features, input_GE)
+    identity_field = torch.einsum('...,ab->...ab', torch.ones(config_1500.shape[:-2]), torch.eye(3))
+    assert torch.allclose(features_out @ features_out.adjoint(), identity_field.to(torch.cdouble))
+
+
 @pytest.mark.slow
 def test_LGE_BilinearLM_autograd():
     n_input1 = 2
