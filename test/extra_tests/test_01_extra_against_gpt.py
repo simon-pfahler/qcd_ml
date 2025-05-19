@@ -72,6 +72,7 @@ try:
         assert abs(val_qcdml - val_gpt) / abs(val_gpt) < 1e-14
 
 
+    @pytest.mark.skip(reason="gpt API changed")
     def test_mse_loss():
         """
         Tests the complex mean squared error loss against the gpt implementation.
