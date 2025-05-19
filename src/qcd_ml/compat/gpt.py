@@ -32,16 +32,14 @@ def lattice2ndarray(lattice):
         q_top = g.qcd.gauge.topological_charge_5LI(U_smeared, field=True)
         plot_scalar_field(lattice2ndarray(q_top))
     """
-    if g.rank() != 0:
-        raise RuntimeError("Detected MPI-rank != 0. This indicates that you are running with several MPI-ranks. "
-                           "The method this function uses to view the lattice data can only access the information from the local rank. "
-                           "Therefore converting to a numpy array is not possible.")
     shape = lattice.grid.fdimensions
     shape = list(reversed(shape))
     if lattice[:].shape[1:] != (1,):
         shape.extend(lattice[:].shape[1:])
+
+    coordinates = g.coordinates(lattice)
    
-    result = lattice[:].reshape(shape)
+    result = lattice[coordinates].reshape(shape)
     result = np.swapaxes(result, 0, 3)
     result = np.swapaxes(result, 1, 2)
     return result
@@ -54,12 +52,9 @@ def ndarray2lattice(ndarray, grid, lat_constructor):
 
         lat = ndarray2lattice(arr, g.grid([4,4,4,8], g.double), g.vspincolor)
     """
-    if g.rank() != 0:
-        raise RuntimeError("Detected MPI-rank != 0. This indicates that you are running with several MPI-ranks. "
-                           "The method this function uses to view the lattice data can only access the information from the local rank. "
-                           "Therefore converting to a lattice is not possible.")
     lat = lat_constructor(grid)
     data = np.swapaxes(ndarray, 0, 3)
     data = np.swapaxes(data, 1, 2)
-    lat[:] = data.reshape([data.shape[0] * data.shape[1] * data.shape[2] * data.shape[3]] + list(data.shape[4:]))
+    coordinates = g.coordinates(lat)
+    lat[coordinates] = data.reshape([data.shape[0] * data.shape[1] * data.shape[2] * data.shape[3]] + list(data.shape[4:]))
     return lat
