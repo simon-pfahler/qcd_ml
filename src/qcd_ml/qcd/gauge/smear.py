@@ -16,25 +16,6 @@ from ...base.paths  import PathBuffer
 from ...base.operations import SU3_group_compose
 
 
-class compiled_stout:
-    r"""
-    This class represents the "compiled" stout operation for a given ..math:`\rho` and ..math:`U` gauge field.
-    This is useful because typically several smearing steps are performed and the costly computation of
-    ..math:`\exp(iQ)` can be done only once.
-    """
-    def __init__(self
-                 , rho: torch.tensor
-                 , transform_matrix: torch.tensor):
-        self.rho = rho
-        self.transform_matrix = transform_matrix
-
-    def __call__(self, link_field):
-        U_trans = torch.zeros_like(link_field)
-        for mu, (expiQmu, Umu) in enumerate(zip(self.transform_matrix, link_field)):
-            U_trans[mu] = SU3_group_compose(expiQmu, Umu)
-        return U_trans
-
-
 class stout:
     r"""
     This class is used to construct the stout smearing operation.
@@ -44,8 +25,7 @@ class stout:
     the parameter ..math:`\rho` being specified. The actual smearing operation is
     performed as such::
 
-        algorithm = stout(rho)
-        smearer = algorithm(U)
+        smearer = stout(rho)
 
         for i in range(n_smearing_steps):
             U = smearer(U)
@@ -99,7 +79,10 @@ class stout:
 
         transform_matrix = torch.matrix_exp(1j * traceless_hermitian)
 
-        return compiled_stout(self.rho, transform_matrix)
+        U_trans = torch.zeros_like(U)
+        for mu, (expiQmu, Umu) in enumerate(zip(transform_matrix, U)):
+            U_trans[mu] = SU3_group_compose(expiQmu, Umu)
+        return U_trans
 
     @classmethod
     def constant_rho(cls, rho):

@@ -67,3 +67,9 @@ python.install_sources(
   pure: true,
   subdir: 'qcd_ml/nn/matrix_layers'
 )
+
+python.install_sources(
+  'nn/non_gauge/__init__.py', 'nn/non_gauge/convolution.py',
+  pure: true,
+  subdir: 'qcd_ml/nn/non_gauge'
+)

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from qcd_ml.nn.matrix_layers import LGE_Convolution, LGE_Bilinear, LGE_ReTrAct, LGE_Exp
+from qcd_ml.nn.matrix_layers import LGE_Convolution, LGE_Bilinear, LGE_ReTrAct, LGE_Exp, LGE_CB
 from qcd_ml.nn.matrix_layers.bilinear import LGE_BilinearLM, Apply_LGE_Bilinear
 from qcd_ml.base.paths import PathBuffer
 from qcd_ml.base.operations import m_gauge_transform, link_gauge_transform
@@ -81,6 +81,17 @@ def test_LGE_Exp_equivariance(config_1500, V_1500mu0_1500mu2):
     assert torch.allclose(transformed_after, transformed_before)
 
 
+def test_LGE_Exp_unitary(config_1500):
+    n_input = 1
+    layer = LGE_Exp(n_input)
+    input_features = config_1500
+    input_GE = torch.stack([PathBuffer(config_1500, [(0,1), (1,1), (0,-1), (1,-1)]).gauge_transport_matrix])
+
+    features_out = layer.forward(input_features, input_GE)
+    identity_field = torch.einsum('...,ab->...ab', torch.ones(config_1500.shape[:-2]), torch.eye(3))
+    assert torch.allclose(features_out @ features_out.adjoint(), identity_field.to(torch.cdouble))
+
+
 @pytest.mark.slow
 def test_LGE_BilinearLM_autograd():
     n_input1 = 2
@@ -104,3 +115,27 @@ def test_LGE_BilinearLM_autograd():
     input2_features.requires_grad = True
 
     assert torch.autograd.gradcheck(Apply_LGE_Bilinear.apply, (input1_features, input2_features, layer2.weights))
+
+
+def test_LGE_CB_equivariance(config_1500, V_1500mu0_1500mu2):
+    n_input = 2
+    n_output = 2
+    paths = ([[]]
+             + [[(mu, 1)] for mu in range(4)]
+             + [[(mu, -1)] for mu in range(4)])
+
+    layer = LGE_CB(n_input, n_output, paths)
+
+    input_features = torch.randn(n_input, 8,8,8,16, 3,3, dtype=torch.cdouble)
+    with torch.no_grad():
+        output_features = layer.forward(config_1500, input_features)
+    output_features_gt = torch.stack([m_gauge_transform(V_1500mu0_1500mu2, ofl) for ofl in output_features])
+
+    input_features_gt = torch.stack([m_gauge_transform(V_1500mu0_1500mu2, ifl) for ifl in input_features])
+    config_gt = link_gauge_transform(config_1500, V_1500mu0_1500mu2)
+
+    with torch.no_grad():
+        output_features = layer.forward(config_gt, input_features_gt)
+
+    assert torch.allclose(output_features_gt, output_features)
+
