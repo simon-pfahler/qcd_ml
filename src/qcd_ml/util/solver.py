@@ -83,7 +83,7 @@ def GMRES_inner(A, b, x0, stopat_residual, niterations, innerproduct, preconditi
         for i in range(j+1):
             vjp1_hat = vjp1_hat -  H[i, j] * V[i]
 
-        H[j + 1, j] = np.abs(innerproduct(vjp1_hat, vjp1_hat)) ** 0.5
+        H[j + 1, j] = np.abs(innerproduct(vjp1_hat, vjp1_hat).cpu()) ** 0.5
 
         if H[j + 1, j] == 0.0:
             breakdown = True
@@ -135,14 +135,14 @@ def GMRES(A, b, x0
     else:
         apply_A = lambda x: A @ x
 
-    norm_b = np.abs(innerproduct(b, b)) ** 0.5
+    norm_b = np.abs(innerproduct(b, b).cpu()) ** 0.5
     stopat_residual = None
     if norm_b > 1e-10:
         stopat_residual = eps * norm_b
 
     r0 = b - apply_A(x0)
 
-    norm_r0 = np.abs(innerproduct(r0, r0)) ** 0.5
+    norm_r0 = np.abs(innerproduct(r0, r0).cpu()) ** 0.5
 
     if norm_r0 < 1e-10 and stopat_residual is None:
         raise ValueError("b and A@x0 are zero (<1e-10)")
