@@ -5,7 +5,8 @@ qcd_ml Datatypes
 fields. All data is in double precision unless explicitly marked as half
 precision.
 
-- All fields have ``x, y, z, t`` as the first four indices.
+- Gauge fields have ``mu, x, y, z, t`` as the first five indices.
+- Spin-color fields have ``x, y, z, t`` as the first four indices.
 - :math:`SU(3)` matrices are ``3,3`` matrices.
 - Spin matrices are ``4,4`` matrices.
 - Spin-color vectors have indices ``s,g`` where ``s`` is the spin index and
