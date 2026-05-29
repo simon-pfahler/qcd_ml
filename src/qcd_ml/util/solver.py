@@ -87,6 +87,7 @@ def GMRES_inner(A, b, x0, stopat_residual, niterations, innerproduct, preconditi
 
         if H[j + 1, j] == 0.0:
             breakdown = True
+            res = 0.0
             break
 
         v_jp1 = vjp1_hat / H[j + 1, j]
