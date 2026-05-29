@@ -106,3 +106,28 @@ class dirac_wilson_clover:
                                )
 
         return result - self.csw / 4 * improvement
+
+    def apply_diag(self, v):
+        result = (4 + self.mass_parameter) * v
+
+        improvement = 0
+        for mu in range(4):
+            for nu in range(mu):
+                # sigma and field_strength are both anti-symmetric.
+                improvement = (improvement
+                               + 2*v_spin_const_transform(self.sigmamunu[mu, nu], self.field_strength(mu, nu, v))
+                               )
+
+        return result - self.csw / 4 * improvement
+
+    def apply_neg_hop(self, v, mu):
+        result = -v_hop(self.U, mu, 1, v) / 2
+        result -= v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, 1, v)) / 2
+
+        return result
+    
+    def apply_pos_hop(self, v, mu):
+        result = -v_hop(self.U, mu, -1, v) / 2
+        result += v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, -1, v)) / 2
+
+        return result
