@@ -131,21 +131,20 @@ class dirac_wilson_clover:
         for mu in range(4):
             for nu in range(mu):
                 # sigma and field_strength are both anti symmetric.
-                improvement = improvement + 2 * sign * v_spin_const_transform(
+                improvement = improvement + 2 * v_spin_const_transform(
                     self.sigmamunu[mu, nu], self.field_strength(mu, nu, v)
                 )
 
         return result - self.csw / 4 * improvement
 
     def apply_diag(self, v):
-        sign = 1 if not self.dag else -1
         result = (4 + self.mass_parameter) * v
 
         improvement = 0
         for mu in range(4):
             for nu in range(mu):
                 # sigma and field_strength are both anti-symmetric.
-                improvement = improvement + 2 * sign * v_spin_const_transform(
+                improvement = improvement + 2 * v_spin_const_transform(
                     self.sigmamunu[mu, nu], self.field_strength(mu, nu, v)
                 )
 
