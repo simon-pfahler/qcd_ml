@@ -37,7 +37,7 @@ class dirac_wilson:
 
         self.dag = dag
 
-    def __call__(self, v, dag=False):
+    def __call__(self, v):
         sign = 1 if not self.dag else -1
         result = (4 + self.mass_parameter) * v
         for mu in range(4):
