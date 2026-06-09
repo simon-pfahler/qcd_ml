@@ -53,6 +53,29 @@ class dirac_wilson:
 
         return result
 
+    def apply_diag(self, v):
+        result = (4 + self.mass_parameter) * v
+
+        return result
+
+    def apply_neg_hop(self, v, mu):
+        sign = 1 if not self.dag else -1
+        result = -v_hop(self.U, mu, 1, v) / 2
+        result -= sign * (
+            v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, 1, v)) / 2
+        )
+
+        return result
+
+    def apply_pos_hop(self, v, mu):
+        sign = 1 if not self.dag else -1
+        result = -v_hop(self.U, mu, -1, v) / 2
+        result += sign * (
+            v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, -1, v)) / 2
+        )
+
+        return result
+
 
 class dirac_wilson_clover:
     """
