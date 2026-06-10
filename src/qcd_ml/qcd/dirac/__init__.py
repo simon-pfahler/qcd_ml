@@ -41,14 +41,12 @@ class dirac_wilson:
         sign = 1 if not self.dag else -1
         result = (4 + self.mass_parameter) * v
         for mu in range(4):
-            result -= v_hop(self.U, mu, 1, v) / 2
-            result -= v_hop(self.U, mu, -1, v) / 2
+            hopped_pos = v_hop(self.U, mu, 1, v)
+            hopped_neg = v_hop(self.U, mu, -1, v)
 
+            result -= (hopped_pos + hopped_neg) / 2
             result += sign * (
-                v_spin_const_transform(gamma[mu], v_hop(self.U, mu, -1, v)) / 2
-            )
-            result -= sign * (
-                v_spin_const_transform(gamma[mu], v_hop(self.U, mu, 1, v)) / 2
+                v_spin_const_transform(gamma[mu], hopped_pos - hopped_neg) / 2
             )
 
         return result
@@ -60,18 +58,18 @@ class dirac_wilson:
 
     def apply_pos_hop(self, v, mu):
         sign = 1 if not self.dag else -1
-        result = -v_hop(self.U, mu, 1, v) / 2
-        result -= sign * (
-            v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, 1, v)) / 2
+        hopped = v_hop(self.U, mu, 1, v)
+        result = -hopped / 2 - sign * (
+            v_spin_const_transform(self.gamma[mu], hopped) / 2
         )
 
         return result
 
     def apply_neg_hop(self, v, mu):
         sign = 1 if not self.dag else -1
-        result = -v_hop(self.U, mu, -1, v) / 2
-        result += sign * (
-            v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, -1, v)) / 2
+        hopped = v_hop(self.U, mu, -1, v)
+        result = -hopped / 2 + sign * (
+            v_spin_const_transform(self.gamma[mu], hopped) / 2
         )
 
         return result
@@ -138,16 +136,12 @@ class dirac_wilson_clover:
         sign = 1 if not self.dag else -1
         result = (4 + self.mass_parameter) * v
         for mu in range(4):
-            result -= v_hop(self.U, mu, 1, v) / 2
-            result -= v_hop(self.U, mu, -1, v) / 2
+            hopped_pos = v_hop(self.U, mu, 1, v)
+            hopped_neg = v_hop(self.U, mu, -1, v)
 
+            result -= (hopped_pos + hopped_neg) / 2
             result += sign * (
-                v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, -1, v))
-                / 2
-            )
-            result -= sign * (
-                v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, 1, v))
-                / 2
+                v_spin_const_transform(gamma[mu], hopped_pos - hopped_neg) / 2
             )
 
         improvement = 0
@@ -175,18 +169,18 @@ class dirac_wilson_clover:
 
     def apply_pos_hop(self, v, mu):
         sign = 1 if not self.dag else -1
-        result = -v_hop(self.U, mu, 1, v) / 2
-        result -= sign * (
-            v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, 1, v)) / 2
+        hopped = v_hop(self.U, mu, 1, v)
+        result = -hopped / 2 - sign * (
+            v_spin_const_transform(self.gamma[mu], hopped) / 2
         )
 
         return result
 
     def apply_neg_hop(self, v, mu):
         sign = 1 if not self.dag else -1
-        result = -v_hop(self.U, mu, -1, v) / 2
-        result += sign * (
-            v_spin_const_transform(self.gamma[mu], v_hop(self.U, mu, -1, v)) / 2
+        hopped = v_hop(self.U, mu, -1, v)
+        result = -hopped / 2 + sign * (
+            v_spin_const_transform(self.gamma[mu], hopped) / 2
         )
 
         return result
