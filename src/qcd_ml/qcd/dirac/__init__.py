@@ -58,7 +58,7 @@ class dirac_wilson:
 
         return result
 
-    def apply_neg_hop(self, v, mu):
+    def apply_pos_hop(self, v, mu):
         sign = 1 if not self.dag else -1
         result = -v_hop(self.U, mu, 1, v) / 2
         result -= sign * (
@@ -67,7 +67,7 @@ class dirac_wilson:
 
         return result
 
-    def apply_pos_hop(self, v, mu):
+    def apply_neg_hop(self, v, mu):
         sign = 1 if not self.dag else -1
         result = -v_hop(self.U, mu, -1, v) / 2
         result += sign * (
@@ -173,7 +173,7 @@ class dirac_wilson_clover:
 
         return result - self.csw / 4 * improvement
 
-    def apply_neg_hop(self, v, mu):
+    def apply_pos_hop(self, v, mu):
         sign = 1 if not self.dag else -1
         result = -v_hop(self.U, mu, 1, v) / 2
         result -= sign * (
@@ -182,7 +182,7 @@ class dirac_wilson_clover:
 
         return result
 
-    def apply_pos_hop(self, v, mu):
+    def apply_neg_hop(self, v, mu):
         sign = 1 if not self.dag else -1
         result = -v_hop(self.U, mu, -1, v) / 2
         result += sign * (
