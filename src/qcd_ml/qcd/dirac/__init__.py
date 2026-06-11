@@ -46,7 +46,7 @@ class dirac_wilson:
 
             result -= (hopped_pos + hopped_neg) / 2
             result += sign * (
-                v_spin_const_transform(gamma[mu], hopped_pos - hopped_neg) / 2
+                v_spin_const_transform(gamma[mu], hopped_neg - hopped_pos) / 2
             )
 
         return result
@@ -141,7 +141,7 @@ class dirac_wilson_clover:
 
             result -= (hopped_pos + hopped_neg) / 2
             result += sign * (
-                v_spin_const_transform(gamma[mu], hopped_pos - hopped_neg) / 2
+                v_spin_const_transform(gamma[mu], hopped_neg - hopped_pos) / 2
             )
 
         improvement = 0
